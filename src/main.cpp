@@ -65,6 +65,26 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
+/**
+* Taken from https://discussions.udacity.com/t/not-able-to-display-trajectory-and-reference-paths-in-the-simulator/248545/9?u=david_29805351951199
+* psi - car's heading in map coordinates
+* (x_c, y_c) - car's position in map coordinates
+* (x_p, y_p) - point position in map coordinates
+* returns {x', y'} of the point's coordinate in car coordinates
+*/
+vector<double> toCarCoords
+    (double psi, double x_c, double y_c, double x_p, double y_p) {
+  double x_ptr = (x_p - x_c) * cos(psi) + (y_p - y_c) * sin(psi);
+  double y_ptr = (y_p - y_c) * cos(psi) - (x_p - x_c) * sin(psi);
+  return {x_ptr, y_ptr};
+}
+
+Eigen::VectorXd vectorToEigen(vector<double> v) {
+  double* v_pointer = &v[0];
+  Eigen::Map<Eigen::VectorXd> eigen_v(v_pointer, v.size());
+  return eigen_v;
+}
+
 int main() {
   uWS::Hub h;
 
@@ -98,9 +118,32 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          double steer_value;
-          double throttle_value;
-
+          int num_points = ptsx.size();
+          vector<double> cptsx = vector<double>(num_points);
+          vector<double> cptsy = vector<double>(num_points);
+          for (int i=0; i<num_points; i++) {
+            vector<double> car_points = 
+              toCarCoords(psi, px, py, ptsx[i], ptsy[i]);
+            cptsx.push_back(car_points[0]);
+            cptsy.push_back(car_points[1]);
+          }
+          Eigen::VectorXd eigen_cptsx = vectorToEigen(cptsx);
+          Eigen::VectorXd eigen_cptsy = vectorToEigen(cptsy);
+          auto coeffs_car = polyfit(eigen_cptsx, eigen_cptsy, 2);
+          
+          double cte = polyeval(coeffs_car, 0);
+          // Due to the sign starting at 0, the orientation error is -f'(x).
+          // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
+          double epsi = atan(coeffs_car[1]);          
+          cout << "CTE: " << cte << endl;
+          cout << "EPSI: " << epsi << endl;
+          
+          Eigen::VectorXd state(6);
+          //state << px, py, psi, v, cte, epsi;
+          state << 0.0, 0.0, 0.0, v, cte, epsi;
+          auto solution = mpc.Solve(state, coeffs_car);
+          double steer_value = -solution[6];
+          double throttle_value = solution[7];
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;

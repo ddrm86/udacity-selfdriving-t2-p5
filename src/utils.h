@@ -15,7 +15,7 @@ namespace utils {
   // Evaluate a polynomial.
   double polyeval(Eigen::VectorXd coeffs, double x);
   
-  AD<double> polyeval(Eigen::VectorXd &p, AD<double> x);
+  AD<double> polyeval(Eigen::VectorXd coeffs, AD<double> x);
   
   // Fit a polynomial.
   // Adapted from

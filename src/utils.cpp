@@ -10,14 +10,12 @@ double polyeval(Eigen::VectorXd coeffs, double x) {
   return result;
 }
 
-AD<double> polyeval(Eigen::VectorXd &p, AD<double> x) {
-  AD<double> ret = 0.0;
-  AD<double> xpow = 1.0;
-  for (int i=0; i<p.size(); i++) {
-    ret += p(i) * xpow;
-    xpow *= x;
+AD<double> polyeval(Eigen::VectorXd coeffs, AD<double> x) {
+  AD<double> result = 0.0;
+  for (int i = 0; i < coeffs.size(); i++) {
+    result += coeffs[i] * pow(x, i);
   }
-  return ret;
+  return result;
 }
 
 Eigen::VectorXd polyfit

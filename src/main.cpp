@@ -74,8 +74,6 @@ int main() {
           auto coeffs_car = utils::polyfit(eigen_cptsx, eigen_cptsy, 2);
           
           double cte = utils::polyeval(coeffs_car, 0);
-          // Due to the sign starting at 0, the orientation error is -f'(x).
-          // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
           double epsi = atan(coeffs_car[1]);          
           cout << "CTE: " << cte << endl;
           cout << "EPSI: " << epsi << endl;

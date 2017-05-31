@@ -53,5 +53,5 @@ Eigen::VectorXd vectorToEigen(vector<double> v) {
   return eigen_v;
 }
 
-}
+} //end namespace
 

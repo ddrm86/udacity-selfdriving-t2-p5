@@ -7,6 +7,7 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
+#include "utils.h"
 #include "json.hpp"
 
 // for convenience
@@ -30,59 +31,6 @@ string hasData(string s) {
     return s.substr(b1, b2 - b1 + 2);
   }
   return "";
-}
-
-// Evaluate a polynomial.
-double polyeval(Eigen::VectorXd coeffs, double x) {
-  double result = 0.0;
-  for (int i = 0; i < coeffs.size(); i++) {
-    result += coeffs[i] * pow(x, i);
-  }
-  return result;
-}
-
-// Fit a polynomial.
-// Adapted from
-// https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
-Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
-                        int order) {
-  assert(xvals.size() == yvals.size());
-  assert(order >= 1 && order <= xvals.size() - 1);
-  Eigen::MatrixXd A(xvals.size(), order + 1);
-
-  for (int i = 0; i < xvals.size(); i++) {
-    A(i, 0) = 1.0;
-  }
-
-  for (int j = 0; j < xvals.size(); j++) {
-    for (int i = 0; i < order; i++) {
-      A(j, i + 1) = A(j, i) * xvals(j);
-    }
-  }
-
-  auto Q = A.householderQr();
-  auto result = Q.solve(yvals);
-  return result;
-}
-
-/**
-* Taken from https://discussions.udacity.com/t/not-able-to-display-trajectory-and-reference-paths-in-the-simulator/248545/9?u=david_29805351951199
-* psi - car's heading in map coordinates
-* (x_c, y_c) - car's position in map coordinates
-* (x_p, y_p) - point position in map coordinates
-* returns {x', y'} of the point's coordinate in car coordinates
-*/
-vector<double> toCarCoords
-    (double psi, double x_c, double y_c, double x_p, double y_p) {
-  double x_ptr = (x_p - x_c) * cos(psi) + (y_p - y_c) * sin(psi);
-  double y_ptr = (y_p - y_c) * cos(psi) - (x_p - x_c) * sin(psi);
-  return {x_ptr, y_ptr};
-}
-
-Eigen::VectorXd vectorToEigen(vector<double> v) {
-  double* v_pointer = &v[0];
-  Eigen::Map<Eigen::VectorXd> eigen_v(v_pointer, v.size());
-  return eigen_v;
 }
 
 int main() {
@@ -123,15 +71,15 @@ int main() {
           vector<double> cptsy = vector<double>(num_points);
           for (int i=0; i<num_points; i++) {
             vector<double> car_points = 
-              toCarCoords(psi, px, py, ptsx[i], ptsy[i]);
+              utils::toCarCoords(psi, px, py, ptsx[i], ptsy[i]);
             cptsx.push_back(car_points[0]);
             cptsy.push_back(car_points[1]);
           }
-          Eigen::VectorXd eigen_cptsx = vectorToEigen(cptsx);
-          Eigen::VectorXd eigen_cptsy = vectorToEigen(cptsy);
-          auto coeffs_car = polyfit(eigen_cptsx, eigen_cptsy, 2);
+          Eigen::VectorXd eigen_cptsx = utils::vectorToEigen(cptsx);
+          Eigen::VectorXd eigen_cptsy = utils::vectorToEigen(cptsy);
+          auto coeffs_car = utils::polyfit(eigen_cptsx, eigen_cptsy, 2);
           
-          double cte = polyeval(coeffs_car, 0);
+          double cte = utils::polyeval(coeffs_car, 0);
           // Due to the sign starting at 0, the orientation error is -f'(x).
           // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
           double epsi = atan(coeffs_car[1]);          

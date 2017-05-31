@@ -45,16 +45,6 @@ class FG_eval {
   Eigen::VectorXd coeffs;
   FG_eval(Eigen::VectorXd coeffs) { this->coeffs = coeffs; }
 
-  AD<double> polyeval(Eigen::VectorXd &p, AD<double> x) {
-    AD<double> ret = 0.0;
-    AD<double> xpow = 1.0;
-    for (int i=0; i<p.size(); i++) {
-      ret += p(i) * xpow;
-      xpow *= x;
-    }
-    return ret;
-  }
-
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   void operator()(ADvector& fg, const ADvector& vars) {
     // TODO: implement MPC
@@ -123,7 +113,7 @@ class FG_eval {
       AD<double> delta0 = vars[delta_start + i];
       AD<double> a0 = vars[a_start + i];
 
-      AD<double> f1 = polyeval(coeffs, x1);
+      AD<double> f1 = utils::polyeval(coeffs, x1);
       AD<double> psides1 = CppAD::atan(coeffs[1]);
 
       // Here's `x` to get you started.

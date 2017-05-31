@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "Eigen-3.3/Eigen/Core"
+#include "utils.h"
 
 using namespace std;
 
@@ -18,3 +19,4 @@ class MPC {
 };
 
 #endif /* MPC_H */
+

@@ -60,12 +60,6 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
-          /*
-          * TODO: Calculate steeering angle and throttle using MPC.
-          *
-          * Both are in between [-1, 1].
-          *
-          */
           int num_points = ptsx.size();
           vector<double> cptsx = vector<double>(num_points);
           vector<double> cptsy = vector<double>(num_points);

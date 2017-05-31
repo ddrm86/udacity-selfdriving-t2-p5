@@ -1,106 +1,50 @@
-# CarND-Controls-MPC
-Self-Driving Car Engineer Nanodegree Program
+## Model Predictive Control Project
+### David del Río Medina
 
 ---
 
-## Dependencies
+## [Rubric](https://review.udacity.com/#!/rubrics/896/view) Points
 
-* cmake >= 3.5
- * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets) == 0.14, but the master branch will probably work just fine
-  * Follow the instructions in the [uWebSockets README](https://github.com/uWebSockets/uWebSockets/blob/master/README.md) to get setup for your platform. You can download the zip of the appropriate version from the [releases page](https://github.com/uWebSockets/uWebSockets/releases). Here's a link to the [v0.14 zip](https://github.com/uWebSockets/uWebSockets/archive/v0.14.0.zip).
-  * If you have MacOS and have [Homebrew](https://brew.sh/) installed you can just run the ./install-mac.sh script to install this.
-* [Ipopt](https://projects.coin-or.org/Ipopt)
-  * Mac: `brew install ipopt`
-  * Linux
-    * You will need a version of Ipopt 3.12.1 or higher. The version available through `apt-get` is 3.11.x. If you can get that version to work great but if not there's a script `install_ipopt.sh` that will install Ipopt. You just need to download the source from the Ipopt [releases page](https://www.coin-or.org/download/source/Ipopt/) or the [Github releases](https://github.com/coin-or/Ipopt/releases) page.
-    * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`. 
-  * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
-* [CppAD](https://www.coin-or.org/CppAD/)
-  * Mac: `brew install cppad`
-  * Linux `sudo apt-get install cppad` or equivalent.
-  * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
-* [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page). This is already part of the repo so you shouldn't have to worry about it.
-* Simulator. You can download these from the [releases tab](https://github.com/udacity/CarND-MPC-Project/releases).
-* Not a dependency but read the [DATA.md](./DATA.md) for a description of the data sent back from the simulator.
+#### 1. Student describes their model in detail. This includes the state, actuators and update equations.
 
+In every iteration, the model receives a series of waypoints from the reference path the vehicle should follow, the vehicle position, the heading angle and the speed. Using this data, the model must decide how much throttle and steering to apply, and in which direction. This is done in several steps:
 
-## Basic Build Instructions
+1. The model receives all the data in global map coordinates. Dealing with car coordinates is easier, so the first step is converting the waypoints to local vehicle coordinates.
+2. Once the waypoints are converted, an order two polynomial is fitted to these waypoints. This is the path the vehicle will try to follow.
+3. The Cross Track Error (CTE) and Orientation Error (EPSI) are calculated using the fitted polynomial.
+4. The fitted polynomial and the current state of the car (speed, CTE and EPSI) are passed to the Ipopt solver, that predicts the best steering and throttle values for the next `N` steps of `dt` seconds. The solver finds these values by minimizing a given cost function within the boundaries of a given set of constraints.
 
+##### Cost function
 
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./mpc`.
+The cost function is the same that was proposed in the lesson 19 quiz. Basically, the total cost is the sum of all the things we want to penalize:
 
-## Tips
+* Deviation from the desired CTE, EPSI and speed. We want both errors to be as close to zero as possible (meaning the car stays on track and heading correctly, and the speed as close as the reference speed (35mph in my case) as possible.
+* Excessive use of actuators. We want the vehicle to use the throttle and the steering only when necessary.
+* Harsh use of the actuators. We want the vehicle to smooth the changes applied to an actuator, avoiding sudden steering, acceleration and braking.
 
-1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
-is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
-(not too many) it should find and track the reference line.
-2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
-3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.
+The problem with this cost function is that it takes into account several variables of different magnitude. In order to get better results, weights were applied to some parts of the cost calculation:
 
-## Editor Settings
+*  CTE is bigger in magnitude than EPSI, so the former is multiplied by 0.1 and the latter by 1.5. I found that this results in a smoother driving, since the car does not wait that long to correct the heading.
+* The cost of drifting from the reference speed is lowered by a half (weight of 0.5). Without this, despite penalizing the excessive use of actuators, the vehicle sometimes keeps braking and accelerating, trying hard to keep the reference speed.
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+All these weights were found by trial and error. 
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+##### Constraints
 
-## Code Style
+The solver needs a set of constraints that model the problem to come up with actual solutions.
+Basically, for all the variables that determine the state of the model, we need to establish the initial value, the lower and upper bounds and how the value of each variable changes from one timestep to the next one (i.e. the vehicle movement model).
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+I have implemented the global kinematic model proposed in lesson 19, adding CTE and EPSI update equations.
 
-## Project Instructions and Rubric
+#### 2. Student discusses the reasoning behind the chosen N (timestep length) and dt (timestep frequency) values. Additionally the student details the previous values tried.
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+By trial and error, I found that `N = 10` and `dt = 0.1` works well.
+ Smaller values of `N` makes the vehicle react too late to curves, due to lack of predictive power. Bigger values do not seem to make any difference, so it is better to save computational resources.
+ 
+ Bigger values of `dt` have the same effect than a small `N`: lack of reaction speed. Smaller values do not seem to improve driving, maybe due to the 100ms latency. 
+ 
+#### 3. The student implements Model Predictive Control that handles a 100 millisecond latency. Students provide details on how they deal with latency.
 
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
+With the chosen `N` and `dt` parameters there is no need to take special actions to deal with latency, which makes sense, since the chosen timestep frequency is the same as the latency.
 
-## Hints!
-
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+With other `dt` values that I tried, a simple solution is to take advantage of the fact that the solver gives the actuators values for the next `N` timesteps, so we can choose the values the solver finds optimal for the next 2nd to Nth timesteps instead of the current ones.

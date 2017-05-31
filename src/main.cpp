@@ -81,11 +81,10 @@ int main() {
           cout << "EPSI: " << epsi << endl;
           
           Eigen::VectorXd state(6);
-          //state << px, py, psi, v, cte, epsi;
           state << 0.0, 0.0, 0.0, v, cte, epsi;
           auto solution = mpc.Solve(state, coeffs_car);
-          double steer_value = -solution[6];
-          double throttle_value = solution[7];
+          double steer_value = -solution[0];
+          double throttle_value = solution[1];
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;

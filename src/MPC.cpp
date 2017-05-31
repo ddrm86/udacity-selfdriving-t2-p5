@@ -104,8 +104,6 @@ class FG_eval {
       AD<double> y0 = vars[y_start + i];
       AD<double> psi0 = vars[psi_start + i];
       AD<double> v0 = vars[v_start + i];
-      AD<double> cte0 = vars[cte_start + i];
-      AD<double> epsi0 = vars[epsi_start + i];
 
       // Only consider the actuation at time t.
       AD<double> delta0 = vars[delta_start + i];
@@ -254,9 +252,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
 
-  return {solution.x[x_start + 1],   solution.x[y_start + 1],
-          solution.x[psi_start + 1], solution.x[v_start + 1],
-          solution.x[cte_start + 1], solution.x[epsi_start + 1],
-          solution.x[delta_start + 1],   solution.x[a_start + 1]};
+  return {solution.x[delta_start + 1], solution.x[a_start + 1]};
 }
 
